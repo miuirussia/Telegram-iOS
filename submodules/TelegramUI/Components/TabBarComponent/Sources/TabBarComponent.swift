@@ -1,3 +1,4 @@
+import SGSimpleSettings
 import Foundation
 import UIKit
 import Display
@@ -563,14 +564,14 @@ public final class TabBarComponent: Component {
             
             self.overrideUserInterfaceStyle = component.theme.overallDarkAppearance ? .dark : .light
 
-            let barHeight: CGFloat = 56.0 + innerInset * 2.0
+            let barHeight: CGFloat = (SGSimpleSettings.shared.showTabNames ? 56.0 : 40.0) + innerInset * 2.0
 
             var availableItemsWidth: CGFloat = availableSize.width - innerInset * 2.0
             if component.search != nil {
                 availableItemsWidth -= barHeight + 8.0
             }
 
-            let itemSize = CGSize(width: floor(availableItemsWidth / CGFloat(component.items.count)), height: 56.0)
+            let itemSize = CGSize(width: floor(availableItemsWidth / CGFloat(component.items.count)), height: SGSimpleSettings.shared.showTabNames ? 56.0 : 40.0)
             let contentWidth: CGFloat = innerInset * 2.0 + CGFloat(component.items.count) * itemSize.width
             let tabsSize = CGSize(width: min(availableSize.width, contentWidth), height: itemSize.height + innerInset * 2.0)
 
@@ -994,7 +995,7 @@ private final class ItemComponent: Component {
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
             )
             let titleFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) * 0.5), y: availableSize.height - 8.0 - titleSize.height), size: titleSize)
-            if let titleView = self.title.view {
+            if SGSimpleSettings.shared.showTabNames, let titleView = self.title.view {
                 if titleView.superview == nil {
                     self.contextContainerView.contentView.addSubview(titleView)
                 }
