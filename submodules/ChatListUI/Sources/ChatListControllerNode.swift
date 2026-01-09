@@ -1083,9 +1083,6 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
     
-    // MARK: Swiftgram
-    let inlineTabContainerNode: ChatListFilterTabContainerNode
-    
     let mainContainerNode: ChatListContainerNode
     
     var effectiveContainerNode: ChatListContainerNode {
@@ -1104,6 +1101,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
     private var tapRecognizer: UITapGestureRecognizer?
     var navigationBar: NavigationBar?
     let navigationBarView = ComponentView<Empty>()
+    let sgFoldersView = ComponentView<Empty>()
     weak var controller: ChatListControllerImpl?
     
     var toolbar: Toolbar?
@@ -1168,8 +1166,6 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             openArchiveSettings?()
         })
         
-        self.inlineTabContainerNode = ChatListFilterTabContainerNode(inline: true, context: context)
-        
         self.controller = controller
         
         super.init()
@@ -1182,7 +1178,6 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         
         self.addSubnode(self.mainContainerNode)
         
-        self.addSubnode(self.inlineTabContainerNode)
         
         self.mainContainerNode.contentOffsetChanged = { [weak self] offset, listView in
             self?.contentOffsetChanged(offset: offset, listView: listView, isPrimary: true)
@@ -1374,7 +1369,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
     }
     
-    private func updateNavigationBar(layout: ContainerViewLayout, deferScrollApplication: Bool, transition: ComponentTransition) -> (navigationHeight: CGFloat, storiesInset: CGFloat) {
+    private func updateNavigationBar(layout: ContainerViewLayout, deferScrollApplication: Bool, transition: ComponentTransition) -> (tabs: AnyComponent<Empty>?, navigationHeight: CGFloat, storiesInset: CGFloat) {
         let headerContent = self.controller?.updateHeaderContent()
         
         var panels: [HeaderPanelContainerComponent.Panel] = []
@@ -1472,8 +1467,8 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
         }
         
         var navigationHeaderPanels: AnyComponent<Empty>?
+        var tabs: AnyComponent<Empty>? // MARK: Swiftgram
         if self.controller?.tabContainerData != nil || !panels.isEmpty {
-            var tabs: AnyComponent<Empty>?
             if let tabContainerData = self.controller?.tabContainerData, tabContainerData.0.count > 1 {
                 let selectedTab: HorizontalTabsComponent.Tab.Id
                 switch self.effectiveContainerNode.currentItemFilter {
@@ -1596,7 +1591,7 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
                 
             navigationHeaderPanels = AnyComponent(HeaderPanelContainerComponent(
                 theme: self.presentationData.theme,
-                tabs: tabs,
+                tabs: (self.controller?.tabContainerData?.1 ?? false) ? nil : tabs, // MARK: Swiftgram
                 panels: panels
             ))
         }
@@ -1678,9 +1673,9 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             }
             transition.setFrame(view: navigationBarComponentView, frame: CGRect(origin: CGPoint(), size: navigationBarSize))
             
-            return (navigationBarSize.height, 0.0)
+            return (tabs, navigationBarSize.height, 0.0)
         } else {
-            return (0.0, 0.0)
+            return (tabs, 0.0, 0.0)
         }
     }
     
@@ -1855,10 +1850,6 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             cleanMainNavigationBarHeight = visualNavigationHeight
             mainInsets.top = visualNavigationHeight
         }
-        // MARK: Swiftgram
-        if !self.inlineTabContainerNode.isHidden {
-            mainInsets.bottom += 46.0
-        }
         self.mainContainerNode.update(layout: layout, navigationBarHeight: mainNavigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: cleanMainNavigationBarHeight, insets: mainInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: self.inlineStackContainerNode?.location, inlineNavigationTransitionFraction: self.inlineStackContainerTransitionFraction, storiesInset: storiesInset, transition: transition)
         
         if let inlineStackContainerNode = self.inlineStackContainerNode {
@@ -1909,6 +1900,58 @@ final class ChatListControllerNode: ASDisplayNode, ASGestureRecognizerDelegate {
             navigationBarComponentView.deferScrollApplication = false
             navigationBarComponentView.applyCurrentScroll(transition: ComponentTransition(transition))
         }
+        
+        // MARK: Swiftgram
+        let componentTransition = ComponentTransition(transition)
+        let sgFoldersSize = self.sgFoldersView.update(
+            transition: ComponentTransition(transition),
+            component: AnyComponent(HeaderPanelContainerComponent(
+                theme: self.presentationData.theme,
+                tabs: navigationBarLayout.tabs,
+                panels: []
+            )),
+            environment: {},
+            containerSize: layout.size
+        )
+        if let sgFoldersView = self.sgFoldersView.view as? HeaderPanelContainerComponent.View {
+            let displayTabsAtBottom: Bool
+            if let tabContainerData = self.controller?.tabContainerData {
+                displayTabsAtBottom = tabContainerData.1
+            } else {
+                displayTabsAtBottom = false
+            }
+            if displayTabsAtBottom && self.isSearchDisplayControllerActive == nil {
+                if sgFoldersView.superview == nil {
+                    self.view.addSubview(sgFoldersView)
+                    if transition.isAnimated {
+                        sgFoldersView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.23)
+                    } else {
+                        sgFoldersView.alpha = 1.0
+                    }
+                }
+                
+                // Magic
+//                var heightInset: CGFloat = 0.0
+//                if case .forum = self.location {
+//                    heightInset = 4.0
+//                }
+//                var tabBarHeight: CGFloat
+                let bottomInset: CGFloat = layout.insets(options: []).bottom
+//                if !layout.safeInsets.left.isZero {
+//                    tabBarHeight = 34.0 + bottomInset
+//                } else {
+//                    tabBarHeight = 49.0 - heightInset + bottomInset
+//                }
+                //
+                // TODO(swiftgram):
+                componentTransition.setFrame(view: sgFoldersView, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - bottomInset - sgFoldersSize.height - 16.0), size: sgFoldersSize))
+            } else {
+                sgFoldersView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak sgFoldersView] _ in
+                    sgFoldersView?.removeFromSuperview()
+                })
+            }
+        }
+        //
     }
     
     @MainActor
