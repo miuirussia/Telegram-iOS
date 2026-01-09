@@ -239,7 +239,10 @@ public final class HeaderPanelContainerComponent: Component {
                 self.panelViews.removeValue(forKey: key)
             }
             
+            if isFirstPanel { transition.setAlpha(view: self.backgroundContainer, alpha: 0.0); return CGSize() } // MARK: Swiftgram
+            
             transition.setFrame(view: self.backgroundContainer, frame: CGRect(origin: CGPoint(), size: size))
+            transition.setAlpha(view: self.backgroundContainer, alpha: 1.0) // MARK: Swiftgram
             self.backgroundContainer.update(size: size, isDark: component.theme.overallDarkAppearance, transition: transition)
             
             let backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: 0.0), size: CGSize(width: size.width - sideInset * 2.0, height: size.height))
