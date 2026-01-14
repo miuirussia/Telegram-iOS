@@ -2070,7 +2070,8 @@ ios_application(
             ":BroadcastUploadExtension",
         ],
     }),
-    watch_application = ":TelegramWatchApp", # MARK: Swiftgram
+	# Ban watch app for normal build
+    # watch_application = ":TelegramWatchApp", # MARK: Swiftgram
     deps = [
         ":Main",
         ":Lib",
