@@ -2065,7 +2065,7 @@ ios_application(
             ":ShareExtension",
             ":NotificationContentExtension",
             ":NotificationServiceExtension" + notificationServiceExtensionVersion,
-            ":IntentsExtension",
+            # ":IntentsExtension", # Ban siri
             ":WidgetExtension",
             ":BroadcastUploadExtension",
         ],
